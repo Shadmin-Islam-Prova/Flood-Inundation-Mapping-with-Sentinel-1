@@ -1,1 +1,16 @@
+// Load AOI 
+// Load admin-3 shapefile and filter to Sunamganj district
+var geometry = ee.FeatureCollection("projects/ee-sprova155/assets/bgd_admbnda_adm4_bbs_20201113")
+                 .filter(ee.Filter.inList("ADM4_EN", ["Chhatak", "Dowarabazar", "Shantiganj", "Bishwambarpur", "Tahirpur"]));  
 
+// Helper Function 
+function getVVImage(startDate, endDate) {
+  return ee.ImageCollection('COPERNICUS/S1_GRD')
+    .filterBounds(geometry)
+    .filterDate(startDate, endDate)
+    .filter(ee.Filter.eq('instrumentMode', 'IW'))
+    .filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+    .select('VV')
+    .median()
+    .clip(geometry);
