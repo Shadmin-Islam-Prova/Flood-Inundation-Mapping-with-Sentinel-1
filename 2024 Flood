@@ -1,1 +1,71 @@
+// Load AOI 
+// Load admin-3 shapefile and filter to Barishal district
+var geometry = ee.FeatureCollection("projects/ee-sprova155/assets/bgd_admbnda_adm4_bbs_20201113")
+                 .filter(ee.Filter.inList("ADM4_EN", ["Amtali", "Arpangashia", "Baliatali", "Barabagi", "Chakamaiya", "Chhota Bagi", "Chowra", "Dalbuganj", "Dhankhali", "Dhulasar","Gulisakhali", "Haldi", "Karaibaria", "Khaprabhanga", "Lalua", "Lata Chapli", "Mithaganj", "Nilganj", "Nishanbaria", "Pancha Koralia", "Paurashava", "Paurashava", "Sarikkhali", "Sonakata", "Tiakhali"]));  
 
+// Helper Function 
+function getVVImage(startDate, endDate) {
+  return ee.ImageCollection('COPERNICUS/S1_GRD')
+    .filterBounds(geometry)
+    .filterDate(startDate, endDate)
+    .filter(ee.Filter.eq('instrumentMode', 'IW'))
+    .filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))
+    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VV'))
+    .select('VV')
+    .median()
+    .clip(geometry);
+}
+
+// Pre- & During-Flood Images 
+// Pre-flood: just before Remal hit
+var preFlood = getVVImage('2024-04-20', '2024-05-20');
+
+// During-flood: Remal event period (late May 2024)
+var duringFlood = getVVImage('2024-05-25', '2024-05-31');
+
+// Water Thresholding 
+// Pre-flood: calm water VV < -16 dB
+var preFloodWater = preFlood.lt(-16).rename('PreFloodWater');
+
+// During-flood: turbid/moving water VV < -16 dB
+var floodWater = duringFlood.lt(-16).rename('DuringFloodWater');
+
+// Inundation Detection: newly flooded areas
+var newInundation = floodWater.and(preFloodWater.not()).rename('FloodInundation');
+
+// Area Calculation 
+var pixelArea = ee.Image.pixelArea();
+var inundationAreaImage = newInundation.multiply(pixelArea);
+
+var inundationStats = inundationAreaImage.reduceRegion({
+  reducer: ee.Reducer.sum(),
+  geometry: geometry,
+  scale: 10,
+  maxPixels: 1e10
+});
+
+// Convert to sq km
+var inundationSqKm = ee.Number(inundationStats.get('FloodInundation')).divide(1e6);
+print('Remal Inundated Area in Barishal (sq km):', inundationSqKm);
+
+// Visualization
+// Center map safely on Barishal
+Map.centerObject(geometry.geometry().bounds(), 9);
+
+Map.addLayer(preFlood, {min: -25, max: 0}, 'Pre-Flood VV');
+Map.addLayer(duringFlood, {min: -25, max: 0}, 'During-Flood VV');
+Map.addLayer(preFloodWater.updateMask(preFloodWater), {palette: ['blue']}, 'Pre-Flood Water');
+Map.addLayer(floodWater.updateMask(floodWater), {palette: ['cyan']}, 'Flood Water');
+Map.addLayer(newInundation.updateMask(newInundation), {palette: ['red']}, 'New Inundation (Remal)');
+
+// Export 
+Export.image.toDrive({
+  image: newInundation,
+  description: 'Remal_FloodInundation_Barishal',
+  folder: 'GEE_Exports',
+  fileNamePrefix: 'Remal_FloodInundation_Barishal_2024',
+  region: geometry.geometry().bounds(),
+  scale: 10,
+  crs: 'EPSG:4326',
+  maxPixels: 1e13
+});
