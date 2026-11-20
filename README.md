@@ -4,3 +4,11 @@ A satellite remote sensing project implementing automated flood detection and mu
 ## Project Overview
 
 Sudden flash flood on mid 2022 in Sylhet district resulted in severe humanitarian and environmental impacts. Cloud cover during intense rain events often prevents optical satellite imagery from observing the ground. Synthetic Aperture Radar (SAR) sensors—such as Sentinel-1 operate at microwave frequencies (C-band), penetrating clouds and operating day or night. Smooth water bodies act as specular reflectors, scattering radar signals away from the sensor and appearing dark in SAR imagery. This project extracts flood extent masks by thresholding preprocessed Sentinel-1 imagery across a multi-temporal baseline. The workflow also utilized satellite imagery to detect flooded areas through change detection and threshold-based water classification.
+
+# Data Sources
+Satellite datasets used in this analysis are-
+
+Sentinel-1 (SAR) imagery
+Ancillary geospatial datasets available within GEE
+
+We acknowledge the contribution of ESA in provision of Satellite data through the Copernicus Programme.
