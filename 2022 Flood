@@ -14,3 +14,7 @@ function getVVImage(startDate, endDate) {
     .select('VV')
     .median()
     .clip(geometry);
+
+// Pre- & During-Flood Images 
+// Pre-flood: just before Remal hit
+var preFlood = getVVImage(''2022-03-17', '2022-04-16');
